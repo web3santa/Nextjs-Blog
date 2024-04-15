@@ -1,7 +1,7 @@
 export type FormInputPost = {
-  title: string;
+  name: string;
   content: string;
-  tag: string;
+  tagId: string;
 };
 
 enum GenderEnum {

@@ -1,16 +1,38 @@
 "use client";
 
+import { GET } from "@/app/api/tags/route";
 import { FormInputPost } from "@/types";
+import { Tag } from "@prisma/client";
+import { useQuery } from "@tanstack/react-query";
+import axios from "axios";
 import React, { FC } from "react";
 import { SubmitHandler, useForm } from "react-hook-form";
 
 interface FormPostProps {
   submit: SubmitHandler<FormInputPost>;
   isEditing: boolean;
+  initialValue?: FormInputPost;
+  isPending: boolean;
 }
 
-const FormPost: FC<FormPostProps> = ({ submit, isEditing }) => {
-  const { register, handleSubmit } = useForm<FormInputPost>();
+const FormPost: FC<FormPostProps> = ({
+  submit,
+  isEditing,
+  initialValue,
+  isPending,
+}) => {
+  const { register, handleSubmit } = useForm<FormInputPost>({
+    defaultValues: initialValue,
+  });
+
+  // fetch list tags
+  const { data: dataTags, isLoading: isLoadingTags } = useQuery<Tag[]>({
+    queryKey: ["tags"],
+    queryFn: async () => {
+      const response = await axios.get("/api/tags");
+      return response.data;
+    },
+  });
 
   return (
     <form
@@ -21,7 +43,7 @@ const FormPost: FC<FormPostProps> = ({ submit, isEditing }) => {
         type="text"
         placeholder="Post title.."
         className="input input-bordered w-full max-w-lg"
-        {...register("title", { required: true })}
+        {...register("name", { required: true })}
       />
       <textarea
         className="textarea textarea-bordered w-full max-w-lg"
@@ -29,18 +51,41 @@ const FormPost: FC<FormPostProps> = ({ submit, isEditing }) => {
         {...register("content", { required: true })}
       ></textarea>
 
-      <select
-        className="select select-bordered w-full max-w-lg"
-        {...register("tag", { required: true })}
-        defaultValue={""}
-      >
-        <option value="javascript">Javascript</option>
-        <option value="java">Java</option>
-        <option value="golang">Golang</option>
-      </select>
+      {isLoadingTags ? (
+        <span className="loading loading-spinner loading-xs"></span>
+      ) : (
+        <select
+          className="select select-bordered w-full max-w-lg"
+          {...register("tagId", { required: true })}
+          defaultValue={""}
+        >
+          <option disabled value="">
+            Select tags
+          </option>
+          {dataTags?.map((item) => (
+            <option key={item.id} value={item.id}>
+              {item.name}
+            </option>
+          ))}
+        </select>
+      )}
 
       <button type="submit" className="btn btn-primary w-full max-w-lg">
-        {isEditing ? "Update" : "Create"}
+        {isPending && (
+          <div>
+            <span className="loading loading-ring loading-xs"></span>
+            <span className="loading loading-ring loading-sm"></span>
+            <span className="loading loading-ring loading-md"></span>
+            <span className="loading loading-ring loading-lg"></span>
+          </div>
+        )}
+        {isEditing
+          ? isPending
+            ? "Updating"
+            : "Update"
+          : isPending
+          ? "Creating"
+          : "Create"}
       </button>
     </form>
   );
